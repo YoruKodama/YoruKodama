@@ -12,7 +12,6 @@
 
 <p>🎓 Учусь в <strong>МИРЭА</strong> (RTU MIREA), Москва</p>
 <p>🏆 Участник хакатонов — <a href="https://github.com/YoruKodama/bezum-hack-seamless">первая победа ↗</a></p>
-<p>🌙 Ночной кодер</p>
 
 
 ---
