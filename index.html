@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAULT-TEC TERMINAL // YORUKODAMA</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #00ff41;
+            --green-dim: #008f11;
+            --green-glow: 0 0 8px rgba(0,255,65,.8), 0 0 20px rgba(0,255,65,.4);
+            --amber: #ff9f00;
+            --amber-glow: 0 0 8px rgba(255,159,0,.8);
+            --red: #ff4444;
+            --bg: #050a05;
+            --bg-panel: #0a120a;
+            --bg-card: #0d180d;
+            --border: #1a3a1a;
+            --mono: 'VT323', monospace;
+            --small: 'Share Tech Mono', monospace;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: var(--mono);
+            font-size: 18px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* CRT overlay */
+        #crt {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 9999;
+            background:
+                repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,.13) 2px, rgba(0,0,0,.13) 4px),
+                radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.75) 100%);
+        }
+
+        /* Boot screen */
+        #boot {
+            position: fixed; inset: 0;
+            background: #000; z-index: 10000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 2rem;
+            transition: opacity .6s ease;
+        }
+        #boot.out { opacity: 0; pointer-events: none; }
+        .boot-logo {
+            font-family: var(--mono);
+            color: var(--green);
+            text-align: center;
+            text-shadow: var(--green-glow);
+            font-size: clamp(18px, 3vw, 28px);
+            letter-spacing: 8px;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+        .boot-sub {
+            font-family: var(--small);
+            font-size: 13px;
+            color: var(--green-dim);
+            letter-spacing: 3px;
+            margin-bottom: .4rem;
+            width: 380px; max-width: 90vw;
+        }
+        .boot-track {
+            width: 380px; max-width: 90vw;
+            height: 18px;
+            border: 1px solid var(--green-dim);
+            margin: 1rem 0 .4rem;
+            overflow: hidden;
+        }
+        .boot-fill {
+            height: 100%;
+            background: var(--green);
+            box-shadow: var(--green-glow);
+            width: 0;
+            transition: width .15s linear;
+        }
+        #boot-pct { font-family: var(--small); font-size: 13px; color: var(--green); text-align: center; }
+
+        /* Nav */
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 1000;
+            background: rgba(5,10,5,.96);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(4px);
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex; align-items: center;
+            justify-content: space-between; height: 50px;
+        }
+        .nav-brand {
+            font-family: var(--mono); font-size: 1.3rem;
+            color: var(--green); text-shadow: var(--green-glow);
+            text-decoration: none; letter-spacing: 4px;
+        }
+        .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+        .nav-links a {
+            color: var(--green-dim); text-decoration: none;
+            font-size: .95rem; letter-spacing: 2px;
+            transition: all .2s;
+        }
+        .nav-links a:hover { color: var(--green); text-shadow: var(--green-glow); }
+        .nav-links a:hover::before { content: '> '; }
+        .nav-toggle {
+            display: none; background: none;
+            border: 1px solid var(--green-dim); color: var(--green);
+            font-family: var(--mono); font-size: 1.1rem;
+            padding: 3px 10px; cursor: pointer;
+        }
+        @media(max-width:768px) {
+            .nav-toggle { display: block; }
+            .nav-links {
+                display: none; position: absolute;
+                top: 50px; left: 0; width: 100%;
+                background: var(--bg);
+                border-bottom: 1px solid var(--border);
+                flex-direction: column; padding: 1rem 1.5rem; gap: .8rem;
+            }
+            .nav-links.open { display: flex; }
+        }
+
+        /* Layout */
+        main { max-width: 1200px; margin: 0 auto; padding: 80px 1.5rem 4rem; }
+        section { margin-bottom: 6rem; }
+
+        /* Hero */
+        #hero {
+            min-height: 90vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; padding-top: 3rem;
+        }
+        .hero-pre { font-size: .9rem; color: var(--green-dim); letter-spacing: 6px; margin-bottom: .8rem; font-family: var(--small); }
+        .hero-name {
+            font-size: clamp(2.8rem, 10vw, 7rem);
+            color: var(--green); text-shadow: var(--green-glow);
+            letter-spacing: 8px; position: relative; display: inline-block;
+        }
+        .glitch { position: relative; display: inline-block; }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+        .glitch::before {
+            left: 2px; color: var(--red); opacity: 0;
+            clip-path: polygon(0 25%, 100% 25%, 100% 45%, 0 45%);
+            animation: glitch1 5s infinite;
+        }
+        .glitch::after {
+            left: -2px; color: #0ff; opacity: 0;
+            clip-path: polygon(0 65%, 100% 65%, 100% 80%, 0 80%);
+            animation: glitch2 5s infinite .4s;
+        }
+        @keyframes glitch1 {
+            0%,88%,100%{ opacity:0; transform:translateX(0); }
+            90%{ opacity:1; transform:translateX(-3px); }
+            92%{ opacity:0; }
+            94%{ opacity:1; transform:translateX(3px); }
+            96%{ opacity:0; }
+        }
+        @keyframes glitch2 {
+            0%,86%,100%{ opacity:0; transform:translateX(0); }
+            88%{ opacity:1; transform:translateX(3px); }
+            90%{ opacity:0; }
+            92%{ opacity:1; transform:translateX(-2px); }
+            94%{ opacity:0; }
+        }
+        .hero-sub { font-size: 1.3rem; color: var(--green-dim); letter-spacing: 4px; margin-top: .8rem; }
+        .hero-typed {
+            font-family: var(--small); font-size: .9rem;
+            color: var(--green-dim); max-width: 560px;
+            margin: 1.8rem auto; letter-spacing: 1px; min-height: 1.6em;
+        }
+        .cursor {
+            display: inline-block; width: 10px; height: 1.1em;
+            background: var(--green); animation: blink 1s step-end infinite;
+            vertical-align: text-bottom; margin-left: 2px;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-top: 1rem; }
+        .scroll-hint {
+            margin-top: 3.5rem; font-family: var(--small); font-size: .75rem;
+            color: var(--green-dim); letter-spacing: 4px;
+            animation: blink 2s step-end infinite;
+        }
+
+        /* Section header */
+        .sec-head { margin-bottom: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: .8rem; }
+        .sec-num { font-family: var(--small); font-size: .8rem; color: var(--green-dim); letter-spacing: 4px; }
+        .sec-title { font-size: 2.4rem; color: var(--green); text-shadow: var(--green-glow); letter-spacing: 6px; }
+        .sec-line { font-family: var(--small); font-size: .8rem; color: var(--green-dim); margin-top: .3rem; }
+        .t-amber { color: var(--amber); }
+        .t-red   { color: var(--red); }
+        .t-dim   { color: var(--green-dim); }
+        .t-green { color: var(--green); }
+        .glow    { text-shadow: var(--green-glow); }
+
+        /* Dossier */
+        .dossier {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            padding: 2rem; position: relative;
+        }
+        .dossier::before {
+            content: '[ PERSONNEL FILE — LEVEL 5 CLEARANCE ]';
+            position: absolute; top: -11px; left: 20px;
+            background: var(--bg); padding: 0 10px;
+            font-size: .75rem; color: var(--amber);
+            letter-spacing: 2px; font-family: var(--small);
+        }
+        .dossier-grid {
+            display: grid; grid-template-columns: 180px 1fr; gap: 2rem; align-items: start;
+        }
+        @media(max-width:560px) { .dossier-grid { grid-template-columns: 1fr; } }
+        .avatar {
+            width: 180px; height: 180px;
+            border: 2px solid var(--green-dim);
+            background: var(--bg-card);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 4.5rem; color: var(--green-dim);
+            position: relative; overflow: hidden;
+        }
+        .avatar::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(0,255,65,.04) 3px, rgba(0,255,65,.04) 4px);
+        }
+        .dossier-info { font-family: var(--small); font-size: .85rem; }
+        .drow { display: flex; gap: .8rem; margin-bottom: .7rem; align-items: flex-start; }
+        .dkey { color: var(--green-dim); min-width: 150px; letter-spacing: 1px; flex-shrink: 0; }
+        .dval { color: var(--green); }
+        .dval a { color: var(--amber); text-decoration: none; }
+        .dval a:hover { text-shadow: var(--amber-glow); }
+        .dot-green { color: var(--green); }
+        .dot-amber { color: var(--amber); }
+
+        /* Skills */
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.5rem; }
+        .skill-group {
+            background: var(--bg-panel); border: 1px solid var(--border); padding: 1.5rem;
+        }
+        .sg-title {
+            font-family: var(--small); font-size: .8rem;
+            color: var(--amber); letter-spacing: 3px;
+            border-bottom: 1px solid var(--border); padding-bottom: .5rem; margin-bottom: 1rem;
+        }
+        .skill { margin-bottom: .8rem; }
+        .skill-lbl {
+            display: flex; justify-content: space-between;
+            font-family: var(--small); font-size: .82rem; margin-bottom: .25rem;
+        }
+        .skill-track { height: 7px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+        .skill-bar {
+            height: 100%; background: var(--green);
+            box-shadow: 0 0 6px var(--green); width: 0;
+            transition: width 1.2s ease;
+        }
+
+        /* Projects */
+        .term-top {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            border-bottom: none; padding: .4rem 1rem;
+            font-family: var(--small); font-size: .78rem; color: var(--green-dim);
+            display: flex; align-items: center; gap: .8rem;
+        }
+        .tdot { width: 9px; height: 9px; border-radius: 50%; background: var(--green-dim); }
+        .term-cmd {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            padding: 1rem 1.5rem; margin-bottom: 1.8rem;
+            font-family: var(--small); font-size: .82rem; color: var(--green-dim);
+        }
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap: 1.5rem; }
+        .pcard {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            padding: 1.4rem; position: relative; transition: all .3s;
+        }
+        .pcard:hover { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,65,.12); }
+        .pcard::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 3px; height: 0; background: var(--green);
+            box-shadow: var(--green-glow); transition: height .3s;
+        }
+        .pcard:hover::before { height: 100%; }
+        .pid { font-family: var(--small); font-size: .7rem; color: var(--green-dim); letter-spacing: 2px; margin-bottom: .4rem; }
+        .pname { font-size: 1.45rem; color: var(--green); letter-spacing: 2px; margin-bottom: .6rem; }
+        .pdesc { font-family: var(--small); font-size: .82rem; color: var(--green-dim); line-height: 1.6; margin-bottom: 1rem; }
+        .pstack { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+        .ptag {
+            background: var(--bg); border: 1px solid var(--border);
+            padding: 1px 7px; font-family: var(--small);
+            font-size: .72rem; color: var(--green-dim); letter-spacing: 1px;
+        }
+        .pstatus { font-family: var(--small); font-size: .72rem; letter-spacing: 2px; margin-bottom: .9rem; }
+        .s-active { color: var(--green); }
+        .s-done   { color: var(--amber); }
+        .plinks { display: flex; gap: .7rem; flex-wrap: wrap; }
+
+        /* Buttons */
+        .btn {
+            padding: 5px 14px; font-family: var(--mono); font-size: .95rem;
+            letter-spacing: 2px; text-decoration: none; border: 1px solid;
+            cursor: pointer; background: transparent; transition: all .2s; display: inline-block;
+        }
+        .btn-g  { color: var(--green);  border-color: var(--green); }
+        .btn-g:hover  { background: var(--green);  color: #000; box-shadow: var(--green-glow); }
+        .btn-a  { color: var(--amber);  border-color: var(--amber); }
+        .btn-a:hover  { background: var(--amber);  color: #000; box-shadow: var(--amber-glow); }
+        .btn-off { color: var(--border); border-color: var(--border); cursor: not-allowed; opacity: .5; }
+
+        /* Contact */
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media(max-width:560px) { .contact-grid { grid-template-columns: 1fr; } }
+        .cpanel { background: var(--bg-panel); border: 1px solid var(--border); padding: 1.8rem; }
+        .cpanel-title { font-size: 1.1rem; letter-spacing: 3px; margin-bottom: 1.2rem; color: var(--amber); }
+        .citem { display: flex; align-items: center; gap: .9rem; margin-bottom: 1.1rem; font-family: var(--small); }
+        .cicon { width: 38px; height: 38px; border: 1px solid var(--green-dim); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .clabel { font-size: .7rem; color: var(--green-dim); letter-spacing: 2px; }
+        .cval { color: var(--green); font-size: .88rem; }
+        .cval a { color: var(--amber); text-decoration: none; }
+        .cval a:hover { text-shadow: var(--amber-glow); }
+        .cstatus { font-family: var(--small); font-size: .82rem; line-height: 2.1; }
+
+        /* Terminal */
+        .term-shell { background: var(--bg-panel); border: 1px solid var(--border); padding: 1.4rem; }
+        .term-out {
+            font-family: var(--small); font-size: .82rem;
+            color: var(--green-dim); margin-bottom: 1rem;
+            line-height: 1.9; max-height: 220px; overflow-y: auto;
+        }
+        .term-out::-webkit-scrollbar { width: 4px; }
+        .term-out::-webkit-scrollbar-track { background: var(--bg); }
+        .term-out::-webkit-scrollbar-thumb { background: var(--green-dim); }
+        .term-row { display: flex; align-items: center; gap: .5rem; }
+        .term-prompt { color: var(--green); font-family: var(--small); font-size: .82rem; flex-shrink: 0; }
+        #ti {
+            background: transparent; border: none; outline: none;
+            color: var(--green); font-family: var(--small); font-size: .82rem;
+            width: 100%; caret-color: var(--green);
+        }
+        #ti::placeholder { color: var(--green-dim); }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 1.8rem; text-align: center;
+            font-family: var(--small); font-size: .75rem;
+            color: var(--green-dim); letter-spacing: 2px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--green-dim); }
+
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<div id="crt"></div>
+
+<!-- Boot screen -->
+<div id="boot">
+    <div class="boot-logo">
+        ╔═══════════════════════════════╗<br>
+        ║  V A U L T - T E C           ║<br>
+        ║  I N D U S T R I E S         ║<br>
+        ║  PERSONAL TERMINAL v2.7.7    ║<br>
+        ╚═══════════════════════════════╝
+    </div>
+    <div class="boot-sub">INITIALIZING SYSTEM...</div>
+    <div id="boot-log" class="boot-sub" style="color:var(--green-dim);min-height:1.4em;"></div>
+    <div class="boot-track"><div class="boot-fill" id="bfill"></div></div>
+    <div id="boot-pct">0%</div>
+</div>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-inner">
+        <a href="#hero" class="nav-brand">☢ YORUKODAMA</a>
+        <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">MENU</button>
+        <ul class="nav-links">
+            <li><a href="#about">ДОСЬЕ</a></li>
+            <li><a href="#skills">НАВЫКИ</a></li>
+            <li><a href="#projects">ПРОЕКТЫ</a></li>
+            <li><a href="#contact">СВЯЗЬ</a></li>
+            <li><a href="#terminal">ТЕРМИНАЛ</a></li>
+        </ul>
+    </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<section id="hero">
+    <div class="hero-pre">// VAULT-TEC PERSONNEL FILE //</div>
+    <div class="hero-name"><span class="glitch" data-text="YORUKODAMA">YORUKODAMA</span></div>
+    <div class="hero-sub">SOFTWARE DEVELOPER · МИРЭА · МОСКВА</div>
+    <div class="hero-typed"><span id="typed"></span><span class="cursor"></span></div>
+    <div class="hero-btns">
+        <a href="#projects" class="btn btn-g">[ АРХИВ ПРОЕКТОВ ]</a>
+        <a href="https://github.com/YoruKodama" target="_blank" class="btn btn-a">[ GITHUB ]</a>
+    </div>
+    <div class="scroll-hint">▼ SCROLL DOWN ▼</div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="reveal">
+    <div class="sec-head">
+        <div class="sec-num">// РАЗДЕЛ 01</div>
+        <div class="sec-title">ДОСЬЕ</div>
+        <div class="sec-line">─── PERSONAL DOSSIER — <span class="t-amber">CLASSIFIED LEVEL 3</span> ───</div>
+    </div>
+    <div class="dossier">
+        <div class="dossier-grid">
+            <div>
+                <div class="avatar">&#x1F464;</div>
+                <div style="margin-top:.8rem;font-family:var(--small);font-size:.68rem;color:var(--green-dim);text-align:center;letter-spacing:2px;">
+                    [ ФОТО ЗАСЕКРЕЧЕНО ]<br>VAULT-TEC ID: YK-2077
+                </div>
+            </div>
+            <div class="dossier-info">
+                <div class="drow"><span class="dkey">ПОЗЫВНОЙ:</span><span class="dval glow">YoruKodama</span></div>
+                <div class="drow"><span class="dkey">ЛОКАЦИЯ:</span><span class="dval">Москва ☢</span></div>
+                <div class="drow"><span class="dkey">СТАТУС:</span><span class="dval dot-green">● АКТИВЕН</span></div>
+                <div class="drow"><span class="dkey">УЧЁБА:</span><span class="dval">МИРЭА (RTU MIREA)</span></div>
+                <div class="drow"><span class="dkey">ДОСТИЖЕНИЯ:</span><span class="dval t-amber">🏆 Победитель хакатона «Безум»</span></div>
+                <div class="drow"><span class="dkey">СЕРТИФИКАТЫ:</span><span class="dval">Samsung IT Academy</span></div>
+                <div class="drow"><span class="dkey">В РАЗРАБОТКЕ:</span><span class="dval">SmartCut — умная нарезка продуктов</span></div>
+                <div class="drow"><span class="dkey">РЕЖИМ:</span><span class="dval">🌙 Ночной кодер</span></div>
+                <div class="drow"><span class="dkey">TELEGRAM:</span><span class="dval"><a href="https://t.me/yuririner" target="_blank">@yuririner ↗</a></span></div>
+                <div class="drow"><span class="dkey">GITHUB:</span><span class="dval"><a href="https://github.com/YoruKodama" target="_blank">github.com/YoruKodama ↗</a></span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills" class="reveal">
+    <div class="sec-head">
+        <div class="sec-num">// РАЗДЕЛ 02</div>
+        <div class="sec-title">НАВЫКИ</div>
+        <div class="sec-line">─── SKILL REGISTRY — <span class="t-amber">UPDATED 2026</span> ───</div>
+    </div>
+    <div class="skills-grid">
+        <div class="skill-group">
+            <div class="sg-title">// ЯЗЫКИ</div>
+            <div class="skill"><div class="skill-lbl"><span>Python</span><span>90%</span></div><div class="skill-track"><div class="skill-bar" data-w="90"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>HTML / CSS</span><span>80%</span></div><div class="skill-track"><div class="skill-bar" data-w="80"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>TypeScript / JS</span><span>75%</span></div><div class="skill-track"><div class="skill-bar" data-w="75"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>Kotlin</span><span>70%</span></div><div class="skill-track"><div class="skill-bar" data-w="70"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>C++</span><span>65%</span></div><div class="skill-track"><div class="skill-bar" data-w="65"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>C#</span><span>60%</span></div><div class="skill-track"><div class="skill-bar" data-w="60"></div></div></div>
+        </div>
+        <div class="skill-group">
+            <div class="sg-title">// ФРЕЙМВОРКИ И ИНСТРУМЕНТЫ</div>
+            <div class="skill"><div class="skill-lbl"><span>FastAPI</span><span>85%</span></div><div class="skill-track"><div class="skill-bar" data-w="85"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>Git / GitHub</span><span>85%</span></div><div class="skill-track"><div class="skill-bar" data-w="85"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>REST API Design</span><span>80%</span></div><div class="skill-track"><div class="skill-bar" data-w="80"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>Android SDK</span><span>70%</span></div><div class="skill-track"><div class="skill-bar" data-w="70"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>Qt Framework</span><span>60%</span></div><div class="skill-track"><div class="skill-bar" data-w="60"></div></div></div>
+            <div class="skill"><div class="skill-lbl"><span>Hackathon Survival</span><span>100%</span></div><div class="skill-track"><div class="skill-bar" data-w="100"></div></div></div>
+        </div>
+    </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects" class="reveal">
+    <div class="sec-head">
+        <div class="sec-num">// РАЗДЕЛ 03</div>
+        <div class="sec-title">ПРОЕКТЫ</div>
+        <div class="sec-line">─── PROJECT ARCHIVE — <span class="t-amber">6 ENTRIES FOUND</span> ───</div>
+    </div>
+    <div class="term-top"><div class="tdot"></div><span>VAULT-TEC TERMINAL — PROJECT DATABASE</span></div>
+    <div class="term-cmd">
+        <span class="t-green">vault@yorukodama:~$</span> ls -la /projects/<br>
+        <span class="t-dim">total 6 entries — sorted by last modified</span>
+    </div>
+    <div class="projects-grid">
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/ANDROID/001</div>
+            <div class="pname">☢ SmartCut<span class="t-amber">App</span></div>
+            <div class="pdesc">Умное Android-приложение для распознавания и нарезки продуктов с применением CV-алгоритмов. Текущий активный проект.</div>
+            <div class="pstack"><span class="ptag">Kotlin</span><span class="ptag">Android</span><span class="ptag">ML</span></div>
+            <div class="pstatus s-active">● STATUS: IN DEVELOPMENT</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/SmartCutApp" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <span class="btn btn-off">[ DEMO — В РАЗРАБОТКЕ ]</span>
+            </div>
+        </div>
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/WEB/002</div>
+            <div class="pname">🏆 bezum-hack<span class="t-amber">-seamless</span></div>
+            <div class="pdesc">Победный проект хакатона «Безум». Первая победа — разработан в условиях жёсткого дедлайна.</div>
+            <div class="pstack"><span class="ptag">TypeScript</span><span class="ptag">Hackathon</span><span class="ptag">🏆 1st Place</span></div>
+            <div class="pstatus s-done">■ STATUS: COMPLETED — VICTORY</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/bezum-hack-seamless" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <!-- Добавь сюда ссылку на деплой если есть: <a href="https://..." target="_blank" class="btn btn-a">[ DEMO ]</a> -->
+                <span class="btn btn-off">[ DEMO — N/A ]</span>
+            </div>
+        </div>
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/GUI/003</div>
+            <div class="pname">☢ Zapret-GUI<span class="t-amber">-Fallout</span></div>
+            <div class="pdesc">Графический интерфейс для Zapret с оформлением в стиле терминала Vault-Tec. Эстетика пустоши в каждом пикселе.</div>
+            <div class="pstack"><span class="ptag">Batchfile</span><span class="ptag">GUI</span><span class="ptag">Fallout Theme</span></div>
+            <div class="pstatus s-done">■ STATUS: DEPLOYED</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/Zapret-Gui-FalloutTheme" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <a href="https://github.com/YoruKodama/Zapret-Gui-FalloutTheme/releases" target="_blank" class="btn btn-a">[ RELEASES ]</a>
+            </div>
+        </div>
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/TOOLS/004</div>
+            <div class="pname">🌐 network<span class="t-amber">Analyzer</span></div>
+            <div class="pdesc">Анализатор сетевого трафика на C#. Мониторинг и визуализация пакетов данных в реальном времени.</div>
+            <div class="pstack"><span class="ptag">C#</span><span class="ptag">Networking</span><span class="ptag">.NET</span></div>
+            <div class="pstatus s-done">■ STATUS: COMPLETE</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/networkAnalyzer" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <span class="btn btn-off">[ DEMO — DESKTOP ]</span>
+            </div>
+        </div>
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/PYTHON/005</div>
+            <div class="pname">⚡ Auto<span class="t-amber">Checker</span></div>
+            <div class="pdesc">Утилита автоматической проверки на Python. Автоматизирует рутинные задачи верификации.</div>
+            <div class="pstack"><span class="ptag">Python</span><span class="ptag">Automation</span><span class="ptag">CLI</span></div>
+            <div class="pstatus s-done">■ STATUS: COMPLETE</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/AutoChecker" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <span class="btn btn-off">[ DEMO — CLI ]</span>
+            </div>
+        </div>
+
+        <div class="pcard reveal">
+            <div class="pid">FILE://PROJECTS/API/006</div>
+            <div class="pname">🚀 FastAPI<span class="t-amber">-test</span></div>
+            <div class="pdesc">REST API сервис на FastAPI. Асинхронный Python-бэкенд с автодокументацией Swagger.</div>
+            <div class="pstack"><span class="ptag">Python</span><span class="ptag">FastAPI</span><span class="ptag">REST API</span></div>
+            <div class="pstatus s-done">■ STATUS: COMPLETE</div>
+            <div class="plinks">
+                <a href="https://github.com/YoruKodama/FastApi-test" target="_blank" class="btn btn-g">[ CODE ]</a>
+                <!-- Задеплой на Render.com бесплатно и замени: <a href="https://..." target="_blank" class="btn btn-a">[ LIVE API ]</a> -->
+                <span class="btn btn-off">[ DEMO — N/A ]</span>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="reveal">
+    <div class="sec-head">
+        <div class="sec-num">// РАЗДЕЛ 04</div>
+        <div class="sec-title">СВЯЗЬ</div>
+        <div class="sec-line">─── COMMUNICATION CHANNELS — <span class="t-amber">TRANSMISSION OPEN</span> ───</div>
+    </div>
+    <div class="contact-grid">
+        <div class="cpanel">
+            <div class="cpanel-title">[ КАНАЛЫ СВЯЗИ ]</div>
+            <div class="citem">
+                <div class="cicon">✈</div>
+                <div><div class="clabel">TELEGRAM</div><div class="cval"><a href="https://t.me/yuririner" target="_blank">@yuririner ↗</a></div></div>
+            </div>
+            <div class="citem">
+                <div class="cicon">⚙</div>
+                <div><div class="clabel">GITHUB</div><div class="cval"><a href="https://github.com/YoruKodama" target="_blank">YoruKodama ↗</a></div></div>
+            </div>
+        </div>
+        <div class="cpanel">
+            <div class="cpanel-title">[ СТАТУС СИСТЕМЫ ]</div>
+            <div class="cstatus">
+                <div>ОНЛАЙН:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-green">● АКТИВЕН</span></div>
+                <div>ОТКЛИК:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-green">~24 ЧАСА</span></div>
+                <div>ОТКРЫТ К:&nbsp;&nbsp; <span class="t-green">СТАЖИРОВКАМ</span></div>
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-green">ФРИЛАНСУ</span></div>
+                <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-green">КОЛЛАБОРАЦИЯМ</span></div>
+                <div style="margin-top:.8rem;color:var(--green-dim);font-size:.78rem;">
+                    — война никогда не меняется, но код меняется каждый день —
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TERMINAL -->
+<section id="terminal" class="reveal">
+    <div class="sec-head">
+        <div class="sec-num">// РАЗДЕЛ 05</div>
+        <div class="sec-title">ТЕРМИНАЛ</div>
+        <div class="sec-line">─── INTERACTIVE SHELL — <span class="t-amber">ВВЕДИ 'HELP'</span> ───</div>
+    </div>
+    <div class="term-shell" onclick="document.getElementById('ti').focus()">
+        <div class="term-out" id="to">
+            <div class="t-green">VAULT-TEC PERSONAL TERMINAL v2.7.7</div>
+            <div class="t-dim">Добро пожаловать, выживший. Введите HELP.</div>
+            <div class="t-dim">─────────────────────────────────</div>
+        </div>
+        <div class="term-row">
+            <span class="term-prompt">vault@yorukodama:~$&nbsp;</span>
+            <input id="ti" type="text" autocomplete="off" spellcheck="false" placeholder="команда...">
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <div>☢ VAULT-TEC INDUSTRIES — PERSONAL TERMINAL ☢</div>
+    <div style="margin-top:.4rem;">YoruKodama © 2077 — <span class="t-amber">WAR NEVER CHANGES</span></div>
+</footer>
+
+<script>
+// ── BOOT ──
+const msgs = [
+    'VAULT-TEC BIOS v2.7.7...',
+    'CHECKING RAM... 640K OK',
+    'LOADING PERSONNEL DATABASE...',
+    'DECRYPTING DOSSIER FILES...',
+    'SCANNING FOR THREATS... CLEAR',
+    'ESTABLISHING SECURE LINK...',
+    'LOADING INTERFACE...',
+    'ACCESS GRANTED — WELCOME',
+];
+let bi = 0;
+const bfill = document.getElementById('bfill');
+const bpct  = document.getElementById('boot-pct');
+const blog  = document.getElementById('boot-log');
+const boot  = document.getElementById('boot');
+
+(function step() {
+    if (bi >= msgs.length) {
+        setTimeout(() => {
+            boot.classList.add('out');
+            setTimeout(() => boot.style.display = 'none', 650);
+        }, 400);
+        return;
+    }
+    blog.textContent = '> ' + msgs[bi];
+    const p = Math.round((bi + 1) / msgs.length * 100);
+    bfill.style.width = p + '%';
+    bpct.textContent  = p + '%';
+    bi++;
+    setTimeout(step, 280 + Math.random() * 180);
+})();
+
+// ── TYPEWRITER ──
+const lines = [
+    'Ночной кодер из Москвы.',
+    'Строю вещи, которые работают.',
+    'Победитель хакатонов.',
+    'Студент МИРЭА. Samsung IT Academy.',
+    'Открыт к новым проектам.',
+];
+let li = 0, ci = 0, del = false;
+const tel = document.getElementById('typed');
+
+function type() {
+    const s = lines[li];
+    if (!del) {
+        tel.textContent = s.slice(0, ++ci);
+        if (ci === s.length) { del = true; setTimeout(type, 2200); return; }
+    } else {
+        tel.textContent = s.slice(0, --ci);
+        if (ci === 0) { del = false; li = (li + 1) % lines.length; }
+    }
+    setTimeout(type, del ? 38 : 68);
+}
+setTimeout(type, 3800);
+
+// ── REVEAL + SKILL BARS ──
+const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            e.target.classList.add('in');
+            e.target.querySelectorAll('.skill-bar').forEach(b => b.style.width = b.dataset.w + '%');
+        }
+    });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// ── INTERACTIVE TERMINAL ──
+const out = document.getElementById('to');
+const inp = document.getElementById('ti');
+
+const cmds = {
+    help: `<div class="t-amber">КОМАНДЫ:</div>
+<div>&nbsp;&nbsp;<span class="t-green">about</span>&nbsp;&nbsp;&nbsp;&nbsp;— досье</div>
+<div>&nbsp;&nbsp;<span class="t-green">projects</span>&nbsp;— список проектов</div>
+<div>&nbsp;&nbsp;<span class="t-green">skills</span>&nbsp;&nbsp;&nbsp;— навыки</div>
+<div>&nbsp;&nbsp;<span class="t-green">contact</span>&nbsp;&nbsp;— контакты</div>
+<div>&nbsp;&nbsp;<span class="t-green">github</span>&nbsp;&nbsp;&nbsp;— открыть GitHub</div>
+<div>&nbsp;&nbsp;<span class="t-green">clear</span>&nbsp;&nbsp;&nbsp;&nbsp;— очистить терминал</div>
+<div>&nbsp;&nbsp;<span class="t-green">whoami</span>&nbsp;&nbsp;&nbsp;— ???</div>`,
+
+    about: `<div class="t-green">[PERSONNEL DOSSIER]</div>
+<div>Позывной:  YoruKodama</div>
+<div>Локация:   Москва ☢</div>
+<div>Учёба:     МИРЭА (RTU MIREA)</div>
+<div>Ачивка:    🏆 Победитель хакатона «Безум»</div>
+<div>Telegram:  <a href="https://t.me/yuririner" target="_blank" style="color:var(--amber)">@yuririner</a></div>`,
+
+    projects: `<div class="t-green">[PROJECT ARCHIVE — 6 FILES]</div>
+<div>001&nbsp;&nbsp;SmartCutApp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Kotlin, Android, ML</div>
+<div>002&nbsp;&nbsp;bezum-hack-seamless&nbsp;TypeScript [🏆]</div>
+<div>003&nbsp;&nbsp;Zapret-GUI-Fallout&nbsp;&nbsp;Batchfile, GUI</div>
+<div>004&nbsp;&nbsp;networkAnalyzer&nbsp;&nbsp;&nbsp;&nbsp;C#</div>
+<div>005&nbsp;&nbsp;AutoChecker&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Python</div>
+<div>006&nbsp;&nbsp;FastApi-test&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Python, FastAPI</div>`,
+
+    skills: `<div class="t-green">[SKILL REGISTRY]</div>
+<div>Python&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;██████████████████░░ 90%</div>
+<div>FastAPI&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;█████████████████░░░ 85%</div>
+<div>Git&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;█████████████████░░░ 85%</div>
+<div>HTML/CSS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;████████████████░░░░ 80%</div>
+<div>TypeScript&nbsp;&nbsp;&nbsp;&nbsp;███████████████░░░░░ 75%</div>
+<div>Kotlin&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;██████████████░░░░░░ 70%</div>
+<div>C++&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;█████████████░░░░░░░ 65%</div>`,
+
+    contact: `<div class="t-green">[CONTACT CHANNELS]</div>
+<div>Telegram: <a href="https://t.me/yuririner" target="_blank" style="color:var(--amber)">@yuririner</a></div>
+<div>GitHub:   <a href="https://github.com/YoruKodama" target="_blank" style="color:var(--amber)">github.com/YoruKodama</a></div>
+<div>Статус:   ОТКРЫТ К ПРЕДЛОЖЕНИЯМ</div>`,
+
+    whoami: `<div class="t-green">YoruKodama</div>
+<div class="t-dim">uid=2077(survivor) gid=vault groups=vault,developer,hackathon-winner</div>
+<div class="t-dim">Ночной кодер. Московская пустошь. Война никогда не меняется.</div>`,
+};
+
+inp.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const raw = inp.value.trim();
+    const cmd = raw.toLowerCase();
+    inp.value = '';
+
+    const prompt = document.createElement('div');
+    prompt.innerHTML = `<span class="t-green">vault@yorukodama:~$</span> ${raw}`;
+    out.appendChild(prompt);
+
+    if (cmd === 'clear') {
+        out.innerHTML = '<div class="t-green">VAULT-TEC TERMINAL v2.7.7</div><div class="t-dim">─────────────────────────────────</div>';
+    } else if (cmd === 'github') {
+        window.open('https://github.com/YoruKodama', '_blank');
+        const r = document.createElement('div');
+        r.innerHTML = '<span class="t-green">Открываю GitHub...</span>';
+        out.appendChild(r);
+    } else if (cmds[cmd]) {
+        const r = document.createElement('div');
+        r.innerHTML = cmds[cmd];
+        out.appendChild(r);
+    } else if (raw !== '') {
+        const r = document.createElement('div');
+        r.innerHTML = `<span class="t-red">command not found: ${raw}</span> <span class="t-dim">— try 'help'</span>`;
+        out.appendChild(r);
+    }
+    out.scrollTop = out.scrollHeight;
+});
+</script>
+</body>
+</html>
