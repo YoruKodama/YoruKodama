@@ -13,8 +13,7 @@
 <p>🎓 Учусь в <strong>МИРЭА</strong> (RTU MIREA), Москва</p>
 <p>🏆 Участник хакатонов — <a href="https://github.com/YoruKodama/bezum-hack-seamless">первая победа ↗</a></p>
 <p>🌙 Ночной кодер</p>
-<p>🔭 Сейчас разрабатываю <strong>SmartCut</strong> — умное приложение для нарезки продуктов</p>
-<p>📡 Samsung IT Academy alumnus</p>
+
 
 ---
 
@@ -46,12 +45,8 @@
 |:-----------:|:---------------:|:---------:|
 | [🔪 SmartCutApp](https://github.com/YoruKodama/SmartCutApp) | Умное приложение для нарезки продуктов | Kotlin |
 | [🏆 bezum-hack-seamless](https://github.com/YoruKodama/bezum-hack-seamless) | First victory hack | TypeScript |
-| [☢️ Zapret-Gui-FalloutTheme](https://github.com/YoruKodama/Zapret-Gui-FalloutTheme) | GUI для Zapret в стиле Fallout | Batchfile |
-| [🌐 networkAnalyzer](https://github.com/YoruKodama/networkAnalyzer) | Анализатор сетевого трафика | C# |
-| [⚡ AutoChecker](https://github.com/YoruKodama/AutoChecker) | Утилита автоматической проверки | Python |
-| [🚀 FastApi-test](https://github.com/YoruKodama/FastApi-test) | REST API на FastAPI | Python |
 
----
+
 
 <h2>〔 Stats 〕</h2>
 
